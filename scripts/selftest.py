@@ -1,8 +1,14 @@
 """Offline semantic-caption and portable-schema regression tests."""
 import json,pathlib,tempfile,unittest
-import captions,bcut
+import captions,bcut,studio
 
 class Regressions(unittest.TestCase):
+ def test_music_delivery_default_and_explicit_overrides(self):
+  self.assertEqual(studio.delivery_variants({'music':[{'asset':'score'}]}),['配乐版'])
+  self.assertEqual(studio.delivery_variants({'variants':['无配乐版']}),['无配乐版'])
+  self.assertEqual(studio.delivery_variants({'music':[{'asset':'score'}],'variants':['配乐版','无配乐版']}),['配乐版','无配乐版'])
+  for job in [{},{'music':[]},{'variants':['配乐版']},{'variants':['配乐版','无配乐版']}]:
+   with self.assertRaises(ValueError):studio.delivery_variants(job)
  def test_no_orphan_tail(self):
   text='调运粮棉、集中投放、紧缩资金、抓紧税收彼此配合。'
   xs=captions.split(text);self.assertNotIn('合',xs);self.assertTrue(any('彼此配合' in x for x in xs));self.assertEqual(''.join(captions.key(x) for x in xs),captions.key(text))

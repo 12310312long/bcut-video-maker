@@ -144,8 +144,16 @@ def export_captions(out,tl,job):
         rows.append(f'Dialogue: {x["layer"]},{captions.stamp(x["start"],True)},{captions.stamp(x["end"],True)},Main,,0,0,0,,{code}{x["text"]}')
     (out/'captions.ass').write_text(head+'\n'.join(rows),encoding='utf-8-sig')
 
+def delivery_variants(job):
+    variants=job.get('variants',['配乐版'])
+    if not isinstance(variants,list) or not variants or any(x not in ('配乐版','无配乐版') for x in variants) or len(variants)!=len(set(variants)):
+        raise ValueError('variants must be a nonempty list of unique 配乐版 / 无配乐版 values')
+    if '配乐版' in variants and not job.get('music'):
+        raise ValueError('配乐版需要 music 配置；请选择合适音乐，只有用户明确要求无配乐时才设置 variants=["无配乐版"]')
+    return variants
+
 def build(args):
-    base=pathlib.Path(args.project).resolve().parent;job=bcut.read(args.project);out=(base/job.get('output','delivery')).resolve()
+    base=pathlib.Path(args.project).resolve().parent;job=bcut.read(args.project);variants=delivery_variants(job);out=(base/job.get('output','delivery')).resolve()
     if job.get('profile')=='history':assert job.get('claims'),'Historical narration requires a claims/source table in job.json'
     inputs=[x['path'] for x in job['assets']]+[s[k] for s in job['segments'] for k in ['audio','word_events'] if k in s]
     request_id=ident([job,[(p,digest((base/p).resolve())) for p in inputs]])
@@ -245,7 +253,6 @@ def build(args):
     listing=joined([out/s['file'] for s in tl['shots']],work/'concat.txt');run(['ffmpeg','-v','error','-y','-f','concat','-safe',0,'-i',listing,'-c','copy',work/'silent.mp4'])
     log=subprocess.run(['ffmpeg','-hide_banner','-y','-i',str(work/'silent.mp4'),'-vf',"ass=filename='captions.ass':fontsdir='media/fonts'",'-an',*enc,'-frames:v',str(tl['total_frames']),str(work/'captioned.mp4')],cwd=out,capture_output=True)
     (work/'font-selection.log').write_bytes(log.stderr);assert log.returncode==0,log.stderr.decode('utf-8','replace')[-2500:]
-    variants=job.get('variants',['配乐版'] if job.get('music') else ['无配乐版']);assert variants and set(variants)<={'配乐版','无配乐版'}
     for variant in variants:
         mix([tr for tr in tl['audio_tracks'] if variant!='无配乐版' or tr['role']!='music'],out/'media'/f'mix_{variant}.wav')
         video=out/f'{slug(job["title"])}_{variant}.mp4';run(['ffmpeg','-v','error','-y','-i',work/'captioned.mp4','-i',out/'media'/f'mix_{variant}.wav','-c:v','copy','-c:a','aac','-b:a','256k','-t',total,'-movflags','+faststart',video])
