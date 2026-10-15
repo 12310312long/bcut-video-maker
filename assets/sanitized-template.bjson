@@ -1,0 +1,480 @@
+{
+  "draftCreatedVersion": "3.11.25",
+  "mainWindow": {
+    "browserPanelFiles": []
+  },
+  "timelineWidget": {
+    "combine": {
+      "combinedClips": []
+    },
+    "linkage": false,
+    "linkageDelegate": {
+      "excludeLinkAgeClipWidget": []
+    },
+    "magnet": true,
+    "ruler": {
+      "MarkInfoCountIndex": 0
+    },
+    "timeline": {
+      "adjustTracks": [],
+      "audioTracks": [
+        {
+          "audioClips": [
+            {
+              "assetInfo": {
+                "assetItemType": 5,
+                "audioType": 1,
+                "catID": 0,
+                "content": "",
+                "coverPath": "",
+                "customInfos": {},
+                "displayName": "",
+                "duration": 7785,
+                "fontID": 0,
+                "fontSrcPath": "",
+                "frameRateDen": 1,
+                "frameRateNum": 0,
+                "height": 0,
+                "itemName": "",
+                "originDuration": 0,
+                "originSrcPath": "",
+                "originType": 0,
+                "realMaterialId": "",
+                "shotClipId": "",
+                "shotIndex": -1,
+                "srcPath": "",
+                "type": 2,
+                "videoType": 0,
+                "width": 0
+              },
+              "deNoiseLevel": -1,
+              "fadeIn": 0,
+              "fadeOut": 0,
+              "fxs": [
+                {
+                  "audioFxType": 0,
+                  "bizType": 1,
+                  "fxName": "Volume",
+                  "gainValue": 0,
+                  "idString": "1791975450814682119"
+                }
+              ],
+              "idString": "1791975450814544363",
+              "inPoint": 1067,
+              "keepAudioPitch": true,
+              "materialId": "",
+              "originalFilePath": "",
+              "outPoint": 8852,
+              "rowInTrack": 23,
+              "sourcePath": "",
+              "speed": 1,
+              "srcMissing": false,
+              "trimIn": 0,
+              "trimOut": 7785,
+              "uid": "8516676712443936873"
+            }
+          ],
+          "audioTrackType": 100,
+          "compacted": false,
+          "enable": true,
+          "idString": "1791975450814326757",
+          "index": 0,
+          "lock": false,
+          "trackType": 2,
+          "uid": "4426407402108141571"
+        }
+      ],
+      "captionTracks": [
+        {
+          "captions": [
+            {
+              "assetInfo": {
+                "assetItemType": 15,
+                "audioType": 0,
+                "catID": 0,
+                "content": "",
+                "coverPath": "",
+                "customInfos": {},
+                "displayName": "",
+                "duration": 3000,
+                "fontID": 0,
+                "fontSrcPath": "",
+                "frameRateDen": 1,
+                "frameRateNum": 0,
+                "height": 0,
+                "itemName": "",
+                "originDuration": 0,
+                "originSrcPath": "",
+                "originType": 0,
+                "realMaterialId": "-4",
+                "shotClipId": "",
+                "shotIndex": -1,
+                "srcPath": "",
+                "type": 4,
+                "videoType": 0,
+                "width": 0
+              },
+              "captionText": "",
+              "catId": "",
+              "defaultFontName": "",
+              "defaultFontPath": "",
+              "drawBackgroundColor": false,
+              "drawOutline": false,
+              "drawShadowColor": false,
+              "fancyWordId": "",
+              "fancyWordPath": "",
+              "fontId": "0",
+              "fontName": "",
+              "fontPackagePath": "",
+              "idString": "1791975450814110833",
+              "inAnimationCatId": "",
+              "inAnimationDuration": 0,
+              "inAnimationId": "",
+              "inAnimationPath": "",
+              "inPoint": 1067,
+              "isVerticalLayout": false,
+              "letterSpacing": 100,
+              "lineSpacing": 0,
+              "loopAnimationCatId": "",
+              "loopAnimationDuration": 0,
+              "loopAnimationId": "",
+              "loopAnimationPath": "",
+              "opacity": 1,
+              "outAnimationCatId": "",
+              "outAnimationDuration": 0,
+              "outAnimationId": "",
+              "outAnimationPath": "",
+              "outPoint": 4067,
+              "rotation": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "templateId": "",
+              "templatePackagePath": "",
+              "textAlignment": 1,
+              "textBold": false,
+              "textColor": {
+                "a": 1,
+                "b": 1,
+                "g": 1,
+                "r": 1
+              },
+              "textFrameOriginRect": {
+                "leftBottom": {
+                  "x": -960,
+                  "y": -540
+                },
+                "leftTop": {
+                  "x": -960,
+                  "y": 540
+                },
+                "rightBottom": {
+                  "x": 960,
+                  "y": -540
+                },
+                "rightTop": {
+                  "x": 960,
+                  "y": 540
+                }
+              },
+              "textItalic": false,
+              "transX": 0,
+              "transY": 0,
+              "uid": "1463670164590514369",
+              "underline": false
+            }
+          ],
+          "compacted": false,
+          "enable": true,
+          "idString": "1791975450814222344",
+          "index": 2,
+          "lock": false,
+          "trackType": 3,
+          "uid": "8296498841043910575"
+        }
+      ],
+      "config": {
+        "audioRes": {
+          "channelCount": 2,
+          "sampleRate": 48000
+        },
+        "videoFps": {
+          "den": 1,
+          "num": 30
+        },
+        "videoRes": {
+          "height": 1080,
+          "width": 1920
+        }
+      },
+      "exportAreaInPoint": -1,
+      "exportAreaOutPoint": -1,
+      "filterTracks": [],
+      "idString": "1791975450814569935",
+      "markInfoMap": {},
+      "stickerTracks": [],
+      "timelineVideoFxTracks": [],
+      "videoTracks": [
+        {
+          "clips": [],
+          "compacted": false,
+          "hide": false,
+          "idString": "1791975450814297233",
+          "index": 0,
+          "lock": false,
+          "mute": false,
+          "split": false,
+          "trackType": 1,
+          "transitions": [],
+          "uid": "5963918186234509290"
+        },
+        {
+          "clips": [
+            {
+              "assetInfo": {
+                "assetItemType": 4,
+                "audioType": 0,
+                "catID": 0,
+                "content": "",
+                "coverPath": "",
+                "customInfos": {},
+                "displayName": "",
+                "duration": 8400,
+                "fontID": 0,
+                "fontSrcPath": "",
+                "frameRateDen": 1,
+                "frameRateNum": 30,
+                "height": 1080,
+                "itemName": "",
+                "originDuration": 0,
+                "originSrcPath": "",
+                "originType": 0,
+                "realMaterialId": "",
+                "shotClipId": "",
+                "shotIndex": -1,
+                "srcPath": "",
+                "type": 1,
+                "videoType": 1,
+                "width": 1920
+              },
+              "audioFadeInDuration": 0,
+              "audioFadeOutDuration": 0,
+              "audioFxs": [
+                {
+                  "audioFxType": 0,
+                  "bizType": 1,
+                  "fxName": "Volume",
+                  "gainValue": 0,
+                  "idString": "1791975450814656191"
+                }
+              ],
+              "bgBlurRadius": 0,
+              "bgColor": {
+                "a": 0,
+                "b": 0,
+                "g": 0,
+                "r": 0
+              },
+              "bgImageId": "0",
+              "bgImagePath": "",
+              "bgMode": 0,
+              "curveString": "",
+              "curveType": 0,
+              "deNoiseLevel": -1,
+              "fxs": [
+                {
+                  "businessType": 3,
+                  "dataFilePath": "",
+                  "fxName": "Mask Generator",
+                  "fxType": 0,
+                  "grayscale": false,
+                  "idString": "1791975450814862910",
+                  "index": 0,
+                  "intensity": 1,
+                  "materialId": "",
+                  "opacity": 1,
+                  "packagePath": "",
+                  "regionInfo": {
+                    "circleDiameterX": 0.5,
+                    "circleDiameterY": 0.5,
+                    "featherWidth": 0,
+                    "inverse": false,
+                    "maskType": 0,
+                    "mirrorWidth": 0.5,
+                    "rectCornerRadius": 0,
+                    "rectHeight": 0.5,
+                    "rectWidth": 0.5,
+                    "videoRect": {
+                      "bottom": 1,
+                      "left": 0,
+                      "right": 1,
+                      "top": 0
+                    }
+                  },
+                  "rotation": 0,
+                  "scaleX": 1,
+                  "scaleY": 1,
+                  "strokeOnly": false,
+                  "transX": 0,
+                  "transY": 0
+                },
+                {
+                  "businessType": 1,
+                  "dataFilePath": "",
+                  "fxName": "Transform 2D",
+                  "fxType": 0,
+                  "grayscale": false,
+                  "idString": "1791975450814409898",
+                  "index": 1,
+                  "intensity": 1,
+                  "materialId": "",
+                  "opacity": 1,
+                  "packagePath": "",
+                  "rotation": 0,
+                  "scaleX": 1,
+                  "scaleY": 1,
+                  "strokeOnly": false,
+                  "transX": 0,
+                  "transY": 0
+                },
+                {
+                  "brightness": 0,
+                  "businessType": 8,
+                  "contrast": 0,
+                  "dataFilePath": "",
+                  "fade": 0,
+                  "fxName": "VT_COLOR",
+                  "fxType": 0,
+                  "grayscale": false,
+                  "highlights": 0,
+                  "hue": 0,
+                  "idString": "1791975450814654560",
+                  "index": 2,
+                  "intensity": 1,
+                  "materialId": "",
+                  "opacity": 1,
+                  "packagePath": "",
+                  "rotation": 0,
+                  "saturation": 0,
+                  "scaleX": 1,
+                  "scaleY": 1,
+                  "shadows": 0,
+                  "sharpness": 0,
+                  "strokeOnly": false,
+                  "temperature": 0,
+                  "transX": 0,
+                  "transY": 0,
+                  "vignette": 0
+                }
+              ],
+              "groupAnimationDuration": 0,
+              "groupAnimationID": "",
+              "groupAnimationPackagePath": "",
+              "idString": "1791975450814293892",
+              "inAnimationDuration": 0,
+              "inAnimationID": "",
+              "inAnimationPackagePath": "",
+              "inPoint": 833,
+              "isReversed": false,
+              "keepAudioPitch": true,
+              "materialId": "",
+              "mediaType": 0,
+              "originalFilePath": "",
+              "outAnimationDuration": 0,
+              "outAnimationID": "",
+              "outAnimationPackagePath": "",
+              "outPoint": 9233,
+              "pixelImageMattingFilter": {
+                "enable": false
+              },
+              "propertyFxList": [],
+              "sourcePath": "",
+              "speed": 1,
+              "srcMissing": false,
+              "trimIn": 0,
+              "trimOut": 8400,
+              "uid": "8091539271571832905",
+              "volume": {
+                "leftVolume": 0,
+                "rightVolume": 0
+              }
+            }
+          ],
+          "compacted": false,
+          "hide": false,
+          "idString": "1791975450814439098",
+          "index": 1,
+          "lock": false,
+          "mute": false,
+          "split": false,
+          "trackType": 1,
+          "transitions": [],
+          "uid": "1065681731518955191"
+        }
+      ]
+    },
+    "trackList": {
+      "trackWidgetList": [
+        {
+          "index": 1,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "8296498841043910575"
+        },
+        {
+          "index": 2,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "1065681731518955191"
+        },
+        {
+          "index": 3,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "5963918186234509290"
+        },
+        {
+          "index": 4,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "4426407402108141571"
+        }
+      ]
+    },
+    "trackListWidget": {
+      "trackWidgetList": [
+        {
+          "index": 1,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "8296498841043910575"
+        },
+        {
+          "index": 2,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "1065681731518955191"
+        },
+        {
+          "index": 3,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "5963918186234509290"
+        },
+        {
+          "index": 4,
+          "trackHeightLevel": 0,
+          "trackWidgetWaveHeightLevel": 0,
+          "uid": "4426407402108141571"
+        }
+      ]
+    },
+    "tracking": {},
+    "tts": {},
+    "ttv": {
+      "aiTag": false,
+      "aiTagVoiceID": "",
+      "enableDetach": false,
+      "is_set_bgm": false
+    }
+  }
+}
