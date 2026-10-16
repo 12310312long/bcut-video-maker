@@ -3,6 +3,12 @@ import json,pathlib,tempfile,unittest
 import captions,bcut,studio
 
 class Regressions(unittest.TestCase):
+ def test_partial_voice_cache_is_rejected(self):
+  with tempfile.TemporaryDirectory() as folder:
+   root=pathlib.Path(folder);mp=root/'voice.mp3';ev=root/'events.json';mp.write_bytes(b'x'*1200)
+   bcut.write(ev,[{'text':'保护人民','offset':0,'duration':100}]);self.assertFalse(studio.voice_complete(mp,ev,'保护人民的生命财产。'))
+   bcut.write(ev,[{'text':'保护人民的生命财产','offset':0,'duration':100}]);self.assertTrue(studio.voice_complete(mp,ev,'保护人民的生命财产。'))
+   ev.write_text('invalid json',encoding='utf-8');self.assertFalse(studio.voice_complete(mp,ev,'保护人民'))
  def test_measured_audio_windows(self):
   tl={'fps':30,'total_frames':600,'segments':[{'id':'part','start_frame':90,'end_frame':300,'text':'开始行动','chars':[{'time':4.0},{'time':4.1},{'time':4.2},{'time':4.3}]}]}
   self.assertEqual(studio.audio_window({'segment':'part'},tl),(90,300))

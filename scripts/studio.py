@@ -30,6 +30,11 @@ def doctor(args):
     report['detected_bcut_version']=bcut.app_version(bcut.app_dir(args.bcut_dir))
     print(json.dumps(report,ensure_ascii=False,indent=2))
 
+def voice_complete(mp,events,text):
+    try:
+        return pathlib.Path(mp).stat().st_size>1000 and ''.join(captions.key(x['text']) for x in bcut.read(events))==captions.key(text)
+    except (OSError,ValueError,TypeError,KeyError):return False
+
 async def tts(text,voice,rate,mp,events):
     import edge_tts
     if rate and rate[0] not in '+-':rate='+'+rate
@@ -41,6 +46,7 @@ async def tts(text,voice,rate,mp,events):
                     if event['type']=='audio':f.write(event['data'])
                     elif event['type']=='WordBoundary':words.append({k:event[k] for k in ['text','offset','duration']})
             assert words and temp.stat().st_size>1000,'Empty TTS response'
+            assert ''.join(captions.key(x['text']) for x in words)==captions.key(text),'Incomplete TTS stream; retrying this segment'
             os.replace(temp,mp);bcut.write(events,words);return
         except Exception:
             if attempt==2:raise
@@ -67,11 +73,11 @@ def prepare(job,base,out):
             else:
                 raw=voice_dir/f'{sig}_raw.mp3';ev=voice_dir/f'{sig}_words.json'
                 cache=base/'.bcut-cache/voice';cache.mkdir(parents=True,exist_ok=True)
-                if not raw.exists() or not ev.exists():
-                    if (cache/raw.name).exists() and (cache/ev.name).exists():shutil.copy2(cache/raw.name,raw);shutil.copy2(cache/ev.name,ev)
+                if not voice_complete(raw,ev,text):
+                    if voice_complete(cache/raw.name,cache/ev.name,text):shutil.copy2(cache/raw.name,raw);shutil.copy2(cache/ev.name,ev)
                     else:asyncio.run(tts(text,voice.get('name','zh-CN-YunjianNeural'),voice.get('rate','0%'),raw,ev))
                 for file in [raw,ev]:
-                    if not (cache/file.name).exists():shutil.copy2(file,cache/file.name)
+                    shutil.copy2(file,cache/file.name)
             words=bcut.read(ev);fast=voice_dir/f'{sig}_fast.wav'
             run(['ffmpeg','-v','error','-y','-i',raw,'-af',atempo(tempo),'-ar','48000','-ac','2',fast]);raw_length=duration(fast)
             frames=math.ceil((raw_length+.4)*fps);requested=seg.get('duration')
