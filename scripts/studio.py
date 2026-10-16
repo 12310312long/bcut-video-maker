@@ -58,6 +58,7 @@ def prepare(job,base,out):
     voice=job.get('voice',{});tempo=float(voice.get('tempo',1));segments=[];subs=[];cursor=0;limit=job.get('subtitle',{}).get('max_chars',22)
     media=out/'media';voice_dir=media/'voice';voice_dir.mkdir(parents=True,exist_ok=True)
     for i,seg in enumerate(job['segments']):
+        voice={**job.get('voice',{}),**seg.get('voice',{})};tempo=float(voice.get('tempo',1))
         text=seg.get('text','');sid=seg.get('id',f's{i+1}');chars=[];length=0;wav=None
         if text:
             sig=ident({'text':text,'voice':voice,'renderer':'voice1'})
@@ -152,6 +153,42 @@ def delivery_variants(job):
         raise ValueError('配乐版需要 music 配置；请选择合适音乐，只有用户明确要求无配乐时才设置 variants=["无配乐版"]')
     return variants
 
+def audio_window(item,tl):
+    """Resolve an audio insert against measured segment boundaries, in frames."""
+    fps=tl['fps'];seg=None
+    if 'segment' in item:
+        seg=next((s for s in tl['segments'] if s['id']==item['segment']),None)
+        if seg is None:raise ValueError('Unknown audio segment: '+item['segment'])
+    start=(seg['start_frame'] if seg else 0)+round(float(item.get('start',0))*fps)
+    if item.get('cue'):
+        if seg is None:raise ValueError('Audio cue requires segment')
+        start=round(cue(seg,item['cue'],item.get('occurrence',1))*fps)+round(float(item.get('start',0))*fps)
+    if 'duration' in item:end=start+round(float(item['duration'])*fps)
+    else:
+        end=item.get('end','segment' if seg else 'end')
+        if end=='end':end=tl['total_frames']
+        elif end=='segment':
+            if seg is None:raise ValueError('end=segment requires segment')
+            end=seg['end_frame']
+        else:end=(seg['start_frame'] if seg else 0)+round(float(end)*fps)
+    if not 0<=start<end<=tl['total_frames']:raise ValueError('Audio range is outside timeline')
+    return start,end
+
+def insert_source_captions(tl):
+    """Use reviewed local timings for original speech; never synthesize its voice."""
+    for seg in tl['segments']:
+        for row in seg['design'].get('source_captions',[]):
+            start=float(row['start']);end=float(row['end'])
+            if not 0<=start<end<=(seg['end_frame']-seg['start_frame'])/tl['fps']:
+                raise ValueError('Original speech caption is outside segment '+seg['id'])
+            text=captions.display(row['text'])
+            if not text:raise ValueError('Empty original speech caption')
+            tl['captions'].append(dict(text=text,start=seg['start_frame']/tl['fps']+start,end=seg['start_frame']/tl['fps']+end,layer=0))
+    tl['captions'].sort(key=lambda x:(x['layer'],x['start']))
+    main=[x for x in tl['captions'] if x['layer']==0]
+    if any(a['end']>b['start']+.001 for a,b in zip(main,main[1:])):
+        raise ValueError('Original speech and narration captions overlap; leave space for the original speaker')
+
 def build(args):
     base=pathlib.Path(args.project).resolve().parent;job=bcut.read(args.project);variants=delivery_variants(job);out=(base/job.get('output','delivery')).resolve()
     if job.get('profile')=='history':assert job.get('claims'),'Historical narration requires a claims/source table in job.json'
@@ -168,9 +205,9 @@ def build(args):
     for a in assets.values():
         a['path']=str((base/a['path']).resolve());assert pathlib.Path(a['path']).is_file(),a['path'];hashes[a['id']]=digest(a['path'])
         if job.get('profile')=='history' and a['kind'] in ['image','video']:
-            assert a.get('role') in ['archive','illustration'],'Historical visual must declare archive or illustration'
+            assert a.get('role') in ['archive','interview','illustration'],'Historical visual must declare archive, interview or illustration'
             assert a.get('source_url') and a.get('context'),'Historical assets need source_url and contextual limits'
-            assert not (a.get('ai_generated') and a['role']=='archive'),'Generated historical evidence prohibited'
+            assert not (a.get('ai_generated') and a['role'] in ['archive','interview']),'Generated historical evidence prohibited'
     clips=out/'media/shots';clips.mkdir(parents=True,exist_ok=True);tasks=[];renderer=digest(pathlib.Path(__file__))
     for seg in tl['segments']:
         designs=seg['design']['shots'];assert designs and designs[0].get('cue') is None
@@ -203,6 +240,12 @@ def build(args):
         assert asset['kind']=='video';shot=tl['shots'][i];selected=float(asset.get('clip_duration',n/fps));speed=selected/(n/fps);dest=out/'media'/f'original_{i:03}.wav'
         run(['ffmpeg','-v','error','-y','-ss',asset.get('clip_in',0),'-t',selected,'-i',asset['path'],'-vn','-af',atempo(speed)+f',aresample=48000,volume={asset.get("audio_gain_db",0)}dB,apad,atrim=end_sample={round(n/fps*48000)}','-ar',48000,'-ac',2,dest])
         tl['audio_tracks'].append(dict(role='original',clips=[dict(file=dest.relative_to(out).as_posix(),start_frame=shot['start_frame'],end_frame=shot['end_frame'])]))
+    for i,item in enumerate(job.get('source_audio',[])):
+        asset=assets[item['asset']];start,end=audio_window(item,tl);length=(end-start)/fps;trim=float(item.get('trim',0))
+        assert trim>=0 and trim+length<=duration(asset['path'])+.05,'Original audio source range unavailable'
+        dest=out/'media'/f'source_audio_{i:03}.wav'
+        run(['ffmpeg','-v','error','-y','-ss',trim,'-i',asset['path'],'-t',length,'-vn','-af',f'aresample=48000,volume={float(item.get("gain_db",0))}dB,apad,atrim=end_sample={round(length*48000)}','-ar',48000,'-ac',2,dest])
+        tl['audio_tracks'].append(dict(role='original',clips=[dict(file=dest.relative_to(out).as_posix(),start_frame=start,end_frame=end)]))
     # Create an aligned speech/original sidechain before music.
     def mix(tracks,dest):
         cs=[c for tr in tracks for c in tr['clips']];samples=round(total*48000)
@@ -214,12 +257,14 @@ def build(args):
         run(['ffmpeg','-v','error','-y',*inputs,'-filter_complex',';'.join(filters),'-map','[a]','-ar',48000,'-ac',2,dest])
     sidechain=work/'voice.wav';mix(tl['audio_tracks'],sidechain)
     for i,m in enumerate(job.get('music',[])):
-        asset=assets[m['asset']];start=round(m.get('start',0)*fps);end=tl['total_frames'] if m.get('end','end')=='end' else round(m['end']*fps);length=(end-start)/fps;assert 0<=start<end<=tl['total_frames']
+        asset=assets[m['asset']];start,end=audio_window(m,tl);length=(end-start)/fps
         trim=m.get('trim',0);assert trim+length<=duration(asset['path'])+.05,'Music too short; select another range or explicit edited music'
-        dry=work/f'music_dry{i}.wav';local=work/f'voice_local{i}.wav';dest=out/'media'/f'music_{i}.wav';fade=min(2.5,length/3)
+        dry=work/f'music_dry{i}.wav';local=work/f'voice_local{i}.wav';dest=out/'media'/f'music_{i}.wav';fade_in=float(m.get('fade_in',min(2.5,length/3)));fade_out=float(m.get('fade_out',min(2.5,length/3)))
+        assert 0<=fade_in<=length and 0<=fade_out<=length,'Music fade outside clip duration'
         run(['ffmpeg','-v','error','-y','-ss',trim,'-i',asset['path'],'-t',length,'-af',f'loudnorm=I={m.get("lufs",-29)}:TP=-9:LRA=7,aresample=48000,apad,atrim=end_sample={round(length*48000)}','-ar',48000,'-ac',2,dry])
         run(['ffmpeg','-v','error','-y','-i',sidechain,'-af',f'atrim=start={start/fps}:end={end/fps},asetpts=PTS-STARTPTS',local])
-        run(['ffmpeg','-v','error','-y','-i',dry,'-i',local,'-filter_complex',f'[0:a][1:a]sidechaincompress=threshold=0.06:ratio=3:attack=20:release=400,afade=t=in:d={fade},afade=t=out:st={length-fade}:d={fade},apad,atrim=end_sample={round(length*48000)}[a]','-map','[a]','-ar',48000,'-ac',2,dest])
+        fades=(f',afade=t=in:d={fade_in}' if fade_in else '')+(f',afade=t=out:st={length-fade_out}:d={fade_out}' if fade_out else '')
+        run(['ffmpeg','-v','error','-y','-i',dry,'-i',local,'-filter_complex',f'[0:a][1:a]sidechaincompress=threshold=0.06:ratio=3:attack=20:release=400{fades},apad,atrim=end_sample={round(length*48000)}[a]','-map','[a]','-ar',48000,'-ac',2,dest])
         tl['audio_tracks'].append(dict(role='music',clips=[dict(file=dest.relative_to(out).as_posix(),start_frame=start,end_frame=end)]))
     byid={s['id']:s for s in tl['segments']}
     for overlay in job.get('overlays',[]):
@@ -229,7 +274,7 @@ def build(args):
         if x['end']=='end':x['end']=total
         elif x['end']=='segment':assert seg is not None;x['end']=seg['end_frame']/fps
         x['text']=captions.display(x['text']);x.setdefault('layer',1);tl['captions'].append(x)
-    export_captions(out,tl,job);bcut.write(out/'timeline.json',tl)
+    insert_source_captions(tl);export_captions(out,tl,job);bcut.write(out/'timeline.json',tl)
     snapshot=json.loads(json.dumps(job));snapshot['output']='rebuilt-delivery'
     if job.get('bundle_sources',True):
         originals=out/'source-media';originals.mkdir(exist_ok=True)

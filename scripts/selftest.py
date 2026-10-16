@@ -3,6 +3,19 @@ import json,pathlib,tempfile,unittest
 import captions,bcut,studio
 
 class Regressions(unittest.TestCase):
+ def test_measured_audio_windows(self):
+  tl={'fps':30,'total_frames':600,'segments':[{'id':'part','start_frame':90,'end_frame':300,'text':'开始行动','chars':[{'time':4.0},{'time':4.1},{'time':4.2},{'time':4.3}]}]}
+  self.assertEqual(studio.audio_window({'segment':'part'},tl),(90,300))
+  self.assertEqual(studio.audio_window({'segment':'part','cue':'行动','start':-.2,'duration':2},tl),(120,180))
+  self.assertEqual(studio.audio_window({'start':2,'end':6},tl),(60,180))
+  self.assertEqual(studio.audio_window({'segment':'part','start':1,'end':4},tl),(120,210))
+  with self.assertRaises(ValueError):studio.audio_window({'start':19,'duration':2},tl)
+  with self.assertRaises(ValueError):studio.audio_window({'segment':'missing'},tl)
+ def test_original_speech_captions_and_overlap(self):
+  tl={'fps':30,'captions':[],'segments':[{'id':'w','start_frame':60,'end_frame':180,'design':{'source_captions':[{'text':'原声，内容。','start':.5,'end':2}]}}]}
+  studio.insert_source_captions(tl);self.assertEqual(tl['captions'],[{'text':'原声内容','start':2.5,'end':4.0,'layer':0}])
+  tl['captions']=[{'text':'旁白','start':2,'end':3,'layer':0}]
+  with self.assertRaises(ValueError):studio.insert_source_captions(tl)
  def test_music_delivery_default_and_explicit_overrides(self):
   self.assertEqual(studio.delivery_variants({'music':[{'asset':'score'}]}),['配乐版'])
   self.assertEqual(studio.delivery_variants({'variants':['无配乐版']}),['无配乐版'])

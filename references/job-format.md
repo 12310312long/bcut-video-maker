@@ -43,6 +43,39 @@ segment.editorial_cuts 可为逐条字幕数组，去标点后拼接必须与正
 
 没有旁白时 text 为空、duration 为明确秒数，适合原声/纯画面视频。不能以这个功能掩盖失败的旁白合成。
 
+各 segment 可用 voice 覆盖全局配音参数，例如 {"rate":"-5%","tempo":1.0}，只作用于该段合成旁白，不改变素材原声。
+
+## 原声插入与多段音乐
+
+同步采访镜头设 keep_audio=true。采访段 text 为空并指定 duration，让旁白自然暂停。视频可声明 role="interview"，context 写明身份、录制日期和谈及事件日期，不把事后采访当同期现场。
+
+segment.source_captions 每项为 text/start/end，单位是相对该段起点的秒，来自实际转写和逐句对齐。它与旁白共用主字幕层，重叠报错，仍去语句标点并保留必要符号。
+
+字段示意，须换成真实片段和实测时间：
+
+```json
+{
+  "segments": [{
+    "id": "witness", "text": "", "duration": 8,
+    "shots": [{"asset": "interview_video", "clip_in": 12, "keep_audio": true}],
+    "source_captions": [{"text": "已逐字核对的原声内容", "start": 0.6, "end": 4.2}]
+  }],
+  "music": [
+    {"asset": "opening_score", "segment": "opening", "end": "segment", "trim": 0, "fade_in": 0.5, "fade_out": 1.5, "lufs": -29},
+    {"asset": "turning_score", "segment": "turning", "cue": "经过核查的旁白短语", "duration": 12, "trim": 6, "fade_in": 1, "fade_out": 2, "lufs": -31}
+  ],
+  "source_audio": [
+    {"asset": "reviewed_recording", "segment": "witness", "start": 0, "duration": 8, "trim": 12, "gain_db": -2}
+  ]
+}
+```
+
+上例 keep_audio 与 source_audio 演示两种方式；同一录音实际只用一种，避免重复。独立原声 asset 可为音频或含音轨的视频，能延续到其他画面以实现 J-cut/L-cut，保持原速。跨出所属段须显式设置 duration 或结束时间，并避免盖住下一段旁白。
+
+music 与 source_audio 范围规则：不填 segment 时 start/end 是全片绝对秒数；填 segment 时数值是该段局部秒数，默认结束在段尾。cue 从该段实际词时序解析，occurrence 指定重复短语，start 此时为相对 cue 的偏移。duration 优先于 end；end="end" 为全片末尾，end="segment" 为段尾。范围量化到帧，不能超出全片，源素材 trim 后必须足够长。
+
+music 可设置 fade_in/fade_out 秒数，0 表示无淡变，默认各为 2.5 秒与片长三分之一中的较小值。多曲可短暂重叠过渡，局部可无音乐，全片仍只输出一个默认配乐版本。原声身份、原片时间码、转写和音乐使用条件写入 assets 的 context/license 等字段。
+
 ## 画面与声音
 
 每段 shots 首镜头不带 cue，后续 cue 必须是正文中的实际短语；重复短语可用 occurrence 指定第几次。切点来自实际词时序，量化到帧。没有正文时每段用一个镜头，按多个 segment 安排切镜。
