@@ -31,6 +31,15 @@ class Regressions(unittest.TestCase):
  def test_no_orphan_tail(self):
   text='调运粮棉、集中投放、紧缩资金、抓紧税收彼此配合。'
   xs=captions.split(text);self.assertNotIn('合',xs);self.assertTrue(any('彼此配合' in x for x in xs));self.assertEqual(''.join(captions.key(x) for x in xs),captions.key(text))
+ def test_premixed_source_counts_as_music_but_cannot_be_removed(self):
+  job={'assets':[{'id':'recording','contains_music':True}],'source_audio':[{'asset':'recording'}]}
+  self.assertEqual(studio.delivery_variants(job),['配乐版'])
+  for variants in [['无配乐版'],['配乐版','无配乐版']]:
+   with self.assertRaises(ValueError):studio.delivery_variants(dict(job,variants=variants))
+ def test_unused_or_unmarked_source_does_not_supply_music(self):
+  for job in [{'assets':[{'id':'unused','contains_music':True}],'source_audio':[{'asset':'dry'}]},
+              {'assets':[{'id':'dry'}],'source_audio':[{'asset':'dry'}]}]:
+   with self.assertRaises(ValueError):studio.delivery_variants(job)
  def test_subject_stays_with_its_predicate(self):
   xs=captions.split('一枚银元从六百六十元涨到一千八百多元，大米、棉纱也跟着涨。')
   self.assertIn('大米棉纱也跟着涨',xs);self.assertFalse(any(x.endswith('多元大米') for x in xs))

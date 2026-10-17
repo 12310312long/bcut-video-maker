@@ -14,7 +14,11 @@ PYTHON scripts/studio.py verify X:/project/delivery
 
 工具生成 timeline.json、字幕、独立镜头、旁白/原声/音乐轨、MP4、原生草稿和 portable.json。媒体路径均在交付目录内；原始素材来源单独保存。不需要登录、发消息或发布 B 站作品。
 
-默认制作一个配乐版本，Agent 应主动选择并配置有明确使用许可的音乐；不默认附送无配乐版。只有用户明确要求才调整 variants，配乐版缺少音乐配置时提前报错。
+`build`检测到请求与现有`build-request.json`不同，会在输出目录名后追加请求标识；以后续实际返回的`delivery`路径为准，不假设仍在job指定的旧目录。更名或复制交付目录后先重定位，更新配置、成片名及说明，再对当前产物验收、登记和打包。不同修改版本的草稿名称应便于用户辨认。
+
+Windows下读写JSON、字幕和中文文案显式指定UTF-8；运行项目Python脚本可用`-X utf8`，不依赖系统默认代码页。多行脚本或包含多层引号的命令先写入文件再执行，避免PowerShell与Python重复解析引号、反引号和变量。
+
+默认制作一个配乐版本，Agent 应主动选择并配置有明确使用许可的音乐；不默认附送无配乐版。用户指定的 `source_audio` 已含原配乐时，按 [完整原声](original-audio.md) 标记并保留，不再强制叠音乐。其他配乐版缺少音乐配置时提前报错。
 
 时序按整数帧，转换为必剪毫秒与索引微秒时分别换算。唯一连续主视频轨保留分镜粒度。视频原声可独立提取为轨道，配音与音乐分轨。
 
@@ -29,6 +33,10 @@ PYTHON scripts/studio.py register X:/project/delivery --drafts-dir <草稿目录
 ```
 
 必剪运行时只拒绝登记并保留成片，Agent 在最后提示保存退出一次，不强杀进程。索引备份后写临时文件并原子替换，用新 UUID 登记；同交付重复登记依标记复用条目。
+
+草稿未出现在首页时，先用 `doctor` 和 Windows `User Shell Folders/Personal` 确认实际文档位置；OneDrive可能将其重定向，不能认定 `%USERPROFILE%/Documents` 一定生效。核对该位置已有 `Bcut Drafts/draftInfo.json` 与UUID子目录，不通过遍历全盘或猜多个目录反复写入。只复制工程到普通交付目录不会自动出现在草稿箱。
+
+登记后读取目标索引，检查新条目的ID、名称、微秒时长与对应UUID目录中的 `project.bjson`，并核对媒体和字体路径可读。用户禁止computer-use时沿用禁令；可交付明确草稿名供用户手动打开，并如实区分“登记成功”与“实际打开成功”。
 
 ## 换电脑
 

@@ -155,7 +155,11 @@ def delivery_variants(job):
     variants=job.get('variants',['配乐版'])
     if not isinstance(variants,list) or not variants or any(x not in ('配乐版','无配乐版') for x in variants) or len(variants)!=len(set(variants)):
         raise ValueError('variants must be a nonempty list of unique 配乐版 / 无配乐版 values')
-    if '配乐版' in variants and not job.get('music'):
+    premixed_ids={a['id'] for a in job.get('assets',[]) if a.get('contains_music') is True}
+    premixed=any(x['asset'] in premixed_ids for x in job.get('source_audio',[]))
+    if premixed and '无配乐版' in variants:
+        raise ValueError('原声音轨已含音乐，不能通过关闭独立 music 生成无配乐版；需先提供经核对的无音乐来源')
+    if '配乐版' in variants and not job.get('music') and not premixed:
         raise ValueError('配乐版需要 music 配置；请选择合适音乐，只有用户明确要求无配乐时才设置 variants=["无配乐版"]')
     return variants
 

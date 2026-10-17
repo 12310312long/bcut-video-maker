@@ -31,7 +31,7 @@
 
 上面是格式说明，不是可直接交付的选材或文案。Agent 填写真实输入并自行核查。
 
-省略 variants 时默认仅输出配乐版，必须提供有效的 music 素材配置。用户明确要求无配乐时设为 ["无配乐版"]；明确要求两版时才设为 ["配乐版", "无配乐版"]。任何包含配乐版的请求若缺少 music，制作会在配音和渲染前报错，不能以无音乐音轨冒充配乐版。
+省略 variants 时默认仅输出配乐版，需有效的 music 素材配置，或通过 source_audio 实际引入已确认含音乐的预混素材（见下文）。用户明确要求无配乐时设为 ["无配乐版"]；明确要求两版时才设为 ["配乐版", "无配乐版"]。配乐版无任何已配置音乐来源时，在配音和渲染前报错，不能以干声冒充配乐版。
 
 ## 旁白与字幕
 
@@ -75,6 +75,22 @@ segment.source_captions 每项为 text/start/end，单位是相对该段起点�
 music 与 source_audio 范围规则：不填 segment 时 start/end 是全片绝对秒数；填 segment 时数值是该段局部秒数，默认结束在段尾。cue 从该段实际词时序解析，occurrence 指定重复短语，start 此时为相对 cue 的偏移。duration 优先于 end；end="end" 为全片末尾，end="segment" 为段尾。范围量化到帧，不能超出全片，源素材 trim 后必须足够长。
 
 music 可设置 fade_in/fade_out 秒数，0 表示无淡变，默认各为 2.5 秒与片长三分之一中的较小值。多曲可短暂重叠过渡，局部可无音乐，全片仍只输出一个默认配乐版本。原声身份、原片时间码、转写和音乐使用条件写入 assets 的 context/license 等字段。
+
+## 预混音轨与双语字幕
+
+用户选定的原录音已含配乐时，可用以下字段；`contains_music` 必须是布尔值 `true`，且该素材须确实通过 `source_audio` 引入。工具据此允许配乐版不另配 `music`，但拒绝仍含该原声的无配乐版，不执行自动人声分离。
+
+```json
+{
+  "assets": [{"id": "recording", "path": "inputs/recording.ogg", "kind": "audio", "contains_music": true}],
+  "source_audio": [{"asset": "recording", "start": 0, "duration": 12, "trim": 0, "gain_db": 0}],
+  "variants": ["配乐版"]
+}
+```
+
+上例只是字段片段，须补齐真实素材来源、许可及对应镜头时长。预混原声进入原生原声音轨，可整体剪切与调音量，不能分别编辑内部人声和音乐。
+
+双语共用一份实测字幕数据。中文可填 `source_captions`（第0层）；原文由共同数据生成 `overlays`，设如 `layer=1`、全片绝对 `start/end`、独立 `size/x/y`。背景说明从其他层起分配，避免同层重叠。`overlays` 的 `y` 为文字中心坐标，需结合字号与上下字幕间距实看。当前不是带语言字段的自动翻译接口；分语言和双语SRT需另外从共同数据生成，默认 `captions.srt` 仅包含第0层。
 
 ## 画面与声音
 
