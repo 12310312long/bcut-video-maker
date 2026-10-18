@@ -133,11 +133,31 @@ def render_clip(asset,frames,size,fps,dest,enc):
     filt=f'[0:v]setpts=(PTS-STARTPTS)/{speed:.9f},split=2[b][f];[b]scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},gblur=sigma=24,eq=brightness=-0.2[bg];[f]scale={w}:{h}:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,fps={fps},setsar=1,tpad=stop_mode=clone:stop_duration=0.1[v]'
     run(['ffmpeg','-v','error','-y','-ss',start,'-t',selected,'-i',asset['path'],'-filter_complex',filt,'-map','[v]','-an','-frames:v',frames,*enc,'-pix_fmt','yuv420p',dest])
 
+def source_window(asset,source_hash,seconds):
+    origin=asset.get('source_range',{});rate=float(origin.get('rate',1));start=float(origin.get('start',0))+float(asset.get('clip_in',0))*rate
+    selected=float(asset.get('clip_duration',seconds))
+    assert rate>0 and start>=0 and selected>0,'Invalid original source range'
+    return dict(id=origin.get('id',source_hash),start=start,end=start+selected*rate)
+
+def source_overlaps(shots,fps):
+    result=[]
+    for i,x in enumerate(shots):
+        a=x.get('source_range')
+        if not a:continue
+        for j,y in enumerate(shots[i+1:],i+1):
+            b=y.get('source_range')
+            if not b or a['id']!=b['id']:continue
+            overlap=min(a['end'],b['end'])-max(a['start'],b['start'])
+            if overlap>1/fps:
+                result.append(dict(shots=[i,j],source_id=a['id'],overlap_seconds=round(overlap,6),reuse_reason=y.get('reuse_reason','')))
+    return result
+
 def export_captions(out,tl,job):
     from PIL import ImageFont
     w,h=tl['size'];font=out/'media/fonts/ShanghaiSerif-Bold.ttf';default_size=job.get('subtitle',{}).get('size',round(62*w/1920));default_y=job.get('subtitle',{}).get('y',round(h*.915))
     for x in tl['captions']:
         x.setdefault('size',default_size);x.setdefault('x',w/2);x.setdefault('y',default_y)
+        x['stroke_level']=captions.stroke_level(x.get('stroke_level',job.get('subtitle',{}).get('stroke_level',captions.DEFAULT_STROKE_LEVEL)))
         assert x['start']>=0 and x['end']>x['start'] and x['end']<=tl['total_frames']/tl['fps']+.001
         f=ImageFont.truetype(str(font),x['size']);assert f.getlength(x['text'])<w*.91,f'Caption overflow: {x["text"]}'
         assert x['size']/2+3<x['y']<h-x['size']/2-3,'Caption vertical overflow'
@@ -147,7 +167,9 @@ def export_captions(out,tl,job):
     rows=[]
     for x in tl['captions']:
         assert not any(c in x['text'] for c in '{}\\\n'),'ASS control characters are not caption text'
-        code='{\\pos('+str(x['x'])+','+str(x['y'])+')\\fs'+str(x['size'])+'\\fad(60,60)}'
+        # ASS uses output pixels; BCUT stores half its UI level, not ASS pixels.
+        border=x['stroke_level']/4*w/1920
+        code='{\\pos('+str(x['x'])+','+str(x['y'])+')\\fs'+str(x['size'])+'\\bord'+f'{border:.3f}'+'\\3c&H000000&\\3a&H00&\\fad(60,60)}'
         rows.append(f'Dialogue: {x["layer"]},{captions.stamp(x["start"],True)},{captions.stamp(x["end"],True)},Main,,0,0,0,,{code}{x["text"]}')
     (out/'captions.ass').write_text(head+'\n'.join(rows),encoding='utf-8-sig')
 
@@ -227,6 +249,9 @@ def build(args):
             a=dict(assets[design['asset']]);a.update({k:v for k,v in design.items() if k not in ['asset','cue','occurrence']});assert a['kind'] in ['image','video']
             sig=ident([hashes[design['asset']],a,end-start,size,fps,renderer]);dest=clips/f'{sig}.mp4'
             shot=dict(asset=design['asset'],source_hash=hashes[design['asset']],provenance_id=a.get('provenance_id',hashes[design['asset']]),kind=a['kind'],start_frame=start,end_frame=end,file=dest.relative_to(out).as_posix(),meaning=design.get('meaning',a.get('context','')))
+            if a['kind']=='video':
+                shot['source_range']=source_window(a,hashes[design['asset']],(end-start)/fps)
+                if a.get('reuse_reason'):shot['reuse_reason']=a['reuse_reason']
             tl['shots'].append(shot);tasks.append((a,end-start,dest))
     def render(task):
         a,n,dest=task
@@ -323,6 +348,8 @@ def verify(args):
     counts=collections.Counter(x['provenance_id'] for x in tl['shots'] if x['kind']=='image');maxreuse=max(counts.values(),default=0)
     warnings=[]
     if maxreuse>3:warnings.append('Same original image appears more than 3 times; review necessity')
+    overlaps=source_overlaps(tl['shots'],fps)
+    if any(not x['reuse_reason'] for x in overlaps):warnings.append('Original video ranges overlap without a reuse_reason; review source intervals and cuts')
     if tl['size']!=[1920,1080] or fps!=30:warnings.append('Native resolution/FPS differs from validated 1080p30 baseline; actual app verification required')
     for layer in set(x['layer'] for x in tl['captions']):
         caps=sorted((x for x in tl['captions'] if x['layer']==layer),key=lambda x:x['start'])
@@ -334,7 +361,13 @@ def verify(args):
         for c,s in zip(clips,tl['shots']):
             assert c['inPoint']==prev and c['outPoint']==round(s['end_frame']/fps*1000);assert pathlib.Path(c['sourcePath']).resolve()==(root/s['file']).resolve();assert pathlib.Path(c['sourcePath']).is_file();prev=c['outPoint']
         layers=sorted(set(x['layer'] for x in tl['captions']));assert len(layers)==len(t['captionTracks'])
-        for track,layer in zip(t['captionTracks'],layers):assert [c['captionText'] for c in track['captions']]==[c['text'] for c in tl['captions'] if c['layer']==layer]
+        for track,layer in zip(t['captionTracks'],layers):
+            rows=[c for c in tl['captions'] if c['layer']==layer]
+            assert [c['captionText'] for c in track['captions']]==[c['text'] for c in rows]
+            for native,row in zip(track['captions'],rows):
+                if 'stroke_level' not in row:continue  # Do not impose new styling on legacy projects.
+                expected_width=captions.stroke_level(row['stroke_level'])/2
+                assert native.get('drawOutline') is True and native.get('outlineColor')==dict(r=0,g=0,b=0,a=1) and abs(native.get('outlineWidth',0)-expected_width)<.00001,'Native caption needs opaque black outline and the configured width'
         native_sub=t['captionTracks'][layers.index(0)]['captions'] if 0 in layers else []
         assert [x['captionText'] for x in native_sub]==expected
         for tr in t['captionTracks']:
@@ -357,7 +390,7 @@ def verify(args):
     files.update(root/s['file'] for s in tl['shots']);files.update(root/c['file'] for tr in tl['audio_tracks'] for c in tr['clips'])
     for rec in bcut.read(root/'portable.json')['projects']:
         files.add(root/rec['project']);files.add(root/f'{slug(tl["title"])}_{pathlib.Path(rec["project"]).parent.name}.mp4')
-    report={'status':'code_checks_passed_visual_review_required','seconds':total,'shots':len(tl['shots']),'subtitles':len(expected),'maximum_image_reuses':maxreuse,'variants':checks,'warnings':warnings,'artifact_sha256':{p.relative_to(root).as_posix():digest(p) for p in sorted(files)},'scope':'Automated structure/media checks and generated contact sheet; not GUI or provenance verification'};bcut.write(root/'verification.json',report);print(json.dumps(report,ensure_ascii=False,indent=2))
+    report={'status':'code_checks_passed_visual_review_required','seconds':total,'shots':len(tl['shots']),'subtitles':len(expected),'maximum_image_reuses':maxreuse,'source_overlaps':overlaps,'variants':checks,'warnings':warnings,'artifact_sha256':{p.relative_to(root).as_posix():digest(p) for p in sorted(files)},'scope':'Automated structure/media checks and generated contact sheet; not GUI or provenance verification'};bcut.write(root/'verification.json',report);print(json.dumps(report,ensure_ascii=False,indent=2))
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['doctor','build','verify','relocate','register']);p.add_argument('project',nargs='?');p.add_argument('--bcut-dir');p.add_argument('--drafts-dir');args=p.parse_args()

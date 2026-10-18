@@ -1,5 +1,6 @@
 """BCUT 3.11.25 adapter. No GUI control and no implicit draft-index writes."""
 import copy,ctypes,hashlib,json,os,pathlib,platform,shutil,subprocess,sys,time,uuid
+import captions
 ASSETS=pathlib.Path(__file__).resolve().parents[1]/'assets'
 FAMILY='Shanghai History Serif'
 
@@ -104,6 +105,7 @@ def generate(root,timeline,variant,bcut_dir=None):
         for x in timeline['captions']:
             if x.get('layer',0)!=layer:continue
             c=fresh(caption_seed);c.update(captionText=x['text'],inPoint=round(x['start']*1000),outPoint=round(x['end']*1000),scaleX=x['size']/100,scaleY=x['size']/100,transX=(x['x']-w/2)/(w/2),transY=(h/2-x['y'])/(h/2),letterSpacing=0,drawOutline=True,drawShadowColor=True,fontName=FAMILY,defaultFontName=FAMILY,defaultFontPath=font.as_posix(),fontPackagePath=font.as_posix(),textBold=False)
+            c.update(outlineColor=dict(r=0,g=0,b=0,a=1),outlineWidth=captions.stroke_level(x.get('stroke_level',captions.DEFAULT_STROKE_LEVEL))/2)
             c['textFrameOriginRect']={'leftBottom':{'x':-w/2,'y':-h/2},'leftTop':{'x':-w/2,'y':h/2},'rightBottom':{'x':w/2,'y':-h/2},'rightTop':{'x':w/2,'y':h/2}}
             c['assetInfo'].update(content=x['text'],displayName=x['text'],duration=round((x['end']-x['start'])*1000),fontSrcPath=font.as_posix(),srcPath=resource.as_posix() if resource and resource.exists() else '')
             caps.append(c)

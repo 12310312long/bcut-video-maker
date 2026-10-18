@@ -1,6 +1,13 @@
 """Semantic caption boundaries; punctuation removal does not corrupt numbers."""
 import re,unicodedata
 
+DEFAULT_STROKE_LEVEL=10
+
+def stroke_level(value=DEFAULT_STROKE_LEVEL):
+    value=float(value)
+    if not 0<value<=100:raise ValueError('Caption stroke_level must be greater than 0 and at most 100')
+    return value
+
 def display(text):
     text=re.sub(r'(?<=\d)：(?=\d)',':',text)
     out=[]

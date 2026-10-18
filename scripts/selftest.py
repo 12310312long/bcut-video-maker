@@ -1,8 +1,33 @@
 """Offline semantic-caption and portable-schema regression tests."""
-import json,pathlib,tempfile,unittest
+import json,pathlib,shutil,tempfile,unittest
+from unittest import mock
 import captions,bcut,studio
 
 class Regressions(unittest.TestCase):
+ def test_native_stroke_survives_all_layers_and_relocation(self):
+  with tempfile.TemporaryDirectory() as folder:
+   root=pathlib.Path(folder)/'original';font=root/'media/fonts/ShanghaiSerif-Bold.ttf';font.parent.mkdir(parents=True);shutil.copy2(bcut.ASSETS/font.name,font)
+   tl=dict(fps=30,size=[1920,1080],shots=[],audio_tracks=[],captions=[dict(text=text,start=0,end=2,layer=i,size=54,x=960,y=100+i*100,stroke_level=10) for i,text in enumerate(['中文','English','背景说明'])])
+   bcut.generate(root,tl,'配乐版');bcut.portable(root);moved=pathlib.Path(folder)/'moved';shutil.copytree(root,moved)
+   with mock.patch.object(bcut,'install_font'),mock.patch.object(bcut,'app_dir',return_value=None):bcut.relocate(moved)
+   p=moved/'drafts/配乐版/project.bjson';native=bcut.read(p)['timelineWidget']['timeline']
+   self.assertEqual(len(native['captionTracks']),3)
+   for tr in native['captionTracks']:
+    c=tr['captions'][0];self.assertTrue(c['drawOutline']);self.assertEqual(c['outlineWidth'],5);self.assertEqual(c['outlineColor'],dict(r=0,g=0,b=0,a=1));self.assertTrue(pathlib.Path(c['fontPackagePath']).resolve().is_relative_to(moved.resolve()))
+   saved=bcut.read(p);saved['timelineWidget']['timeline']['captionTracks'][0]['captions'][0]['outlineWidth']=2;bcut.write(p,saved)
+   with mock.patch.object(bcut,'install_font'),mock.patch.object(bcut,'app_dir',return_value=None):bcut.relocate(moved)
+   self.assertEqual(bcut.read(p)['timelineWidget']['timeline']['captionTracks'][0]['captions'][0]['outlineWidth'],2)
+ def test_stroke_cannot_be_zero_or_nonfinite(self):
+  for value in [0,-1,101,float('nan'),float('inf')]:
+   with self.assertRaises(ValueError):captions.stroke_level(value)
+ def test_precut_source_clock_includes_trim(self):
+  r=studio.source_window(dict(source_range=dict(id='film',start=100,rate=1.04),clip_in=2,clip_duration=4),'different-cut-file-hash',5)
+  self.assertEqual(r['id'],'film');self.assertAlmostEqual(r['start'],102.08);self.assertAlmostEqual(r['end'],106.24)
+ def test_overlapping_source_ranges_across_cut_files(self):
+  shots=[dict(file='first.mp4',source_range=dict(id='film',start=1270,end=1278.2)),dict(file='second.mp4',source_range=dict(id='film',start=1276,end=1282.3))]
+  result=studio.source_overlaps(shots,30);self.assertEqual(result,[dict(shots=[0,1],source_id='film',overlap_seconds=2.2,reuse_reason='')])
+  shots[1]['reuse_reason']='明确的回放';self.assertEqual(studio.source_overlaps(shots,30)[0]['reuse_reason'],'明确的回放')
+  shots[1]['source_range']['start']=1278.2;self.assertEqual(studio.source_overlaps(shots,30),[])
  def test_partial_voice_cache_is_rejected(self):
   with tempfile.TemporaryDirectory() as folder:
    root=pathlib.Path(folder);mp=root/'voice.mp3';ev=root/'events.json';mp.write_bytes(b'x'*1200)

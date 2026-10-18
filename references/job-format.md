@@ -35,6 +35,8 @@
 
 ## 旁白与字幕
 
+所有字幕层默认黑色描边、必剪界面粗细10/100。`subtitle.stroke_level` 默认10；个别overlay仅在用户明确要求时覆盖 `stroke_level`。界面标度与原生字段、ASS像素的区别见[执行与迁移](production.md#原生字幕描边)。旧项目迁移不自动套用新样式。
+
 正文保留标点用于自然配音，生成字幕移除语句标点。tempo 通过 atempo 保音高变速，rate 为合成服务参数，两者不同。风格按题材决定。
 
 可提供 segment.audio 与 segment.word_events。词时序为 edge-tts WordBoundary 原始列表，每项含 text、offset、duration，时间单位为 100 纳秒，必须对应 audio 和正文。无词时间的现成录音先用实际可用的对齐/转写工具处理，不能伪造精确字幕。
@@ -99,6 +101,8 @@ music 可设置 fade_in/fade_out 秒数，0 表示无淡变，默认各为 2.5 �
 图片 fit 为 contain 或 fill；zoom 建议小幅，focus 是 0—1 的焦点坐标。裁切与改名仍须使用同一 provenance_id 计数。
 
 视频 clip_in 是原片入点。默认按实际速度使用与时间线等长的片段，源片必须足够长；只有显式 retime=true 并给出 clip_duration 才可重定时。历史画面尽量正常速度。先截取并审核源片，再作为 asset，便于打包迁移。
+
+预裁切视频还需保留原片映射，例如 `source_range={"id":"archive-film-01","start":1276.8,"rate":1}`：id标识共同原片，start为这个资产第0秒对应的原片秒数，rate为每资产秒对应的原片秒数。相同原片的不同裁切文件共用id；未提供时工具只能按实际文件哈希识别同源，无法发现不同文件中的重复底片。`clip_in`、实际取用长度及rate共同换算为timeline中原片入出点。故意重放时在后一次asset或shot写明 `reuse_reason`；字段不代替观看判断。
 
 视频镜头设 keep_audio=true 时独立提取原声，audio_gain_db 控制其音量。旁白与原声冲突需主动调低原声。音乐自动淡入淡出并用旁白/原声作侧链压低；素材不足时不能默认循环伪造连续音乐。
 
