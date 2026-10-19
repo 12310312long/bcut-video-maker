@@ -12,7 +12,7 @@
   "overrun_ratio": 0.1,
   "fps": 30,
   "size": [1920, 1080],
-  "voice": {"name": "zh-CN-YunjianNeural", "rate": "0%", "tempo": 1.0},
+  "voice": {"name": "zh-CN-YunjianNeural", "rate": "0%", "tempo": 1.2},
   "subtitle": {"size": 62, "max_chars": 22},
   "claims": [{"text": "已核查的旁白事实或原文引语", "source_url": "对应的实际来源URL", "context": "日期 单位 身份及证据边界"}],
   "assets": [
